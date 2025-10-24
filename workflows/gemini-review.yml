@@ -1,0 +1,53 @@
+name: Gemini Secure Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    name: Análisis OWASP con Gemini
+
+    steps:
+      # 1️Clonar repo
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2️Instalar Node.js
+      - name: Node setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3️Instalar Gemini CLI
+      - name: Instalar Gemini CLI
+        run: |
+          npm install -g @google/gemini-cli
+          gemini --version
+
+      # 4️Autenticación con el secreto
+      - name: Autenticación Gemini
+        env:
+          GEMINI_TOKEN: ${{ secrets.GEMINI_TOKEN }}
+        run: |
+          mkdir -p ~/.config/gemini-cli
+          echo "{\"token\":\"$GEMINI_TOKEN\"}" > ~/.config/gemini-cli/credentials.json
+
+      # 5️Ejecutar revisión OWASP
+      - name: Revisión OWASP Top 10
+        run: |
+          gemini -p "Analiza este PR con enfoque OWASP Top 10 (2021) y genera hallazgos con severidad y recomendaciones." \
+          --format markdown > gemini-report.md
+          cat gemini-report.md
+
+      # 6️Subir reporte
+      - name: Subir reporte
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-review
+          path: gemini-report.md
