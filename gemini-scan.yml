@@ -1,0 +1,49 @@
+name: Gemini Security Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Gemini CLI
+        run: |
+          pip install google-generativeai
+          pip install gcp-cli
+          pip install gemini-cli
+
+      - name: Run Gemini Security Scan
+        run: |
+          gemini generate \
+            --model gemini-1.5-pro \
+            --input-dir . \
+            --prompt "Realiza un escaneo de seguridad estilo SAST. Identifica vulnerabilidades OWASP Top 10, malas prácticas, código inseguro, validaciones faltantes y riesgos de inyección. Devuelve un reporte claro y con recomendaciones técnicas."
+
+      - name: Save report
+        run: |
+          gemini generate \
+            --model gemini-1.5-pro \
+            --input-dir . \
+            --prompt "Genera un reporte en formato Markdown de vulnerabilidades detectadas y recomendaciones." \
+            > gemini_report.md
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-security-report
+          path: gemini_report.md
